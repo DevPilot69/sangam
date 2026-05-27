@@ -23,3 +23,4 @@ export * as Billing from "./billing";
 export * as Notifications from "./notifications";
 export * as Audit from "./audit";
 export * as EmployeePortal from "./employee-portal";
+export * as Platform from "./platform";

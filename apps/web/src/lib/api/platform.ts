@@ -240,9 +240,10 @@ export async function patchPlatformTenantOperationalStatus(
 }
 
 function getApiBaseUrl(): string {
-  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
-  if (!base) throw new Error("NEXT_PUBLIC_API_URL is not set");
-  return base;
+  // Empty (unset) -> same-origin / relative URLs (production: Next.js +
+  // API on Vercel). Setting an explicit value still works (e.g. for
+  // pointing a dev front-end at a remote API).
+  return process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
 }
 
 export async function downloadPlatformTenantInvoice(
