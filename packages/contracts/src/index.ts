@@ -15,3 +15,7 @@ export * from "./envelope";
 export * as Auth from "./auth";
 export * as Tenant from "./tenant";
 export * as Employees from "./employees";
+export * as Payroll from "./payroll";
+export * as Leave from "./leave";
+export * as Attendance from "./attendance";
+export * as Reports from "./reports";

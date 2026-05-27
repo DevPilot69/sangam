@@ -13,11 +13,9 @@ const SALARY_PAYMENT_METHODS = [
 
 const EMPLOYMENT_STATUS = [
   "ACTIVE",
-  "INACTIVE",
   "ON_LEAVE",
-  "PROBATION",
   "NOTICE",
-  "TERMINATED",
+  "INACTIVE",
 ] as const;
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);

@@ -7,7 +7,15 @@
   "functions": {
     "src/app/v1/payroll/runs/[id]/finalize/route.ts": {
       "maxDuration": 300
+    },
+    "src/app/v1/_cron/seed-attendance/route.ts": {
+      "maxDuration": 300
     }
   },
-  "crons": []
+  "crons": [
+    {
+      "path": "/v1/_cron/seed-attendance",
+      "schedule": "0 3 * * *"
+    }
+  ]
 }

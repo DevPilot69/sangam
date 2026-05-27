@@ -70,8 +70,8 @@ export async function requireAuth(
   opts: ReadonlyArray<PermissionCode | string> | RequireAuthOptions = {},
 ): Promise<AccessTokenPayload> {
   const options: RequireAuthOptions = Array.isArray(opts)
-    ? { permissions: opts }
-    : opts;
+    ? { permissions: opts as ReadonlyArray<PermissionCode | string> }
+    : (opts as RequireAuthOptions);
 
   const token = extractBearer(req);
   if (!token) throw new UnauthorizedError();
