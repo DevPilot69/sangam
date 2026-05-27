@@ -13,9 +13,9 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "node --import tsx prisma/seed.ts",
-    "db:seed:demo": "node --import tsx prisma/seed-demo.ts",
-    "db:seed:large": "node --import tsx prisma/seed-large.ts",
+    "db:seed": "node --env-file=.env --import tsx prisma/seed.ts",
+    "db:seed:demo": "node --env-file=.env --import tsx prisma/seed-demo.ts",
+    "db:seed:large": "node --env-file=.env --import tsx prisma/seed-large.ts",
     "build": "prisma generate"
   },
   "prisma": {
