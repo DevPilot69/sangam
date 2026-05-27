@@ -28,3 +28,4 @@ export * from "./email";
 export * from "./storage";
 export * as biometric from "./biometric";
 export * as pdf from "./pdf";
+export * as razorpay from "./razorpay";

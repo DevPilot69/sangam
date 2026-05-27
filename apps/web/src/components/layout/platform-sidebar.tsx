@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Building2, CalendarDays, Gauge, IndianRupee, KeyRound, LogOut, Network, Users } from "lucide-react";
+import { Building2, CalendarDays, Gauge, IndianRupee, Inbox, KeyRound, LogOut, Network, Users } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { usePlatformAuthStore } from "@/lib/platform/auth-store";
@@ -16,6 +16,7 @@ const links = [
   { href: "/platform/password-manager", label: "Password manager", icon: KeyRound },
   { href: "/platform", label: "Telemetry", icon: Gauge },
   { href: "/platform/billing", label: "Billing & costs", icon: IndianRupee },
+  { href: "/platform/inbox", label: "Email inbox (demo)", icon: Inbox },
 ];
 
 export function PlatformSidebar() {

@@ -19,3 +19,7 @@ export * as Payroll from "./payroll";
 export * as Leave from "./leave";
 export * as Attendance from "./attendance";
 export * as Reports from "./reports";
+export * as Billing from "./billing";
+export * as Notifications from "./notifications";
+export * as Audit from "./audit";
+export * as EmployeePortal from "./employee-portal";
