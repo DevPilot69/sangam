@@ -1,0 +1,27 @@
+{
+  "name": "sangam",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "npm@11.12.1",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "npm run db:generate -w @sangam/db",
+    "db:migrate": "npm run db:migrate -w @sangam/db",
+    "db:studio": "npm run db:studio -w @sangam/db",
+    "db:seed": "npm run db:seed -w @sangam/db"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.8",
+    "typescript": "^5.7.3"
+  }
+}

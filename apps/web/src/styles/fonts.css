@@ -1,0 +1,22 @@
+/* Cuprum — from Cuprum.zip (typography unchanged across palettes) */
+
+@font-face {
+  font-family: "Cuprum";
+  src: url("/fonts/cuprum/Cuprum-VariableFont_wght.ttf") format("truetype");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Cuprum";
+  src: url("/fonts/cuprum/Cuprum-Italic-VariableFont_wght.ttf") format("truetype");
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  --font-body: "Cuprum", system-ui, sans-serif;
+  --font-display: "Cuprum", system-ui, sans-serif;
+}

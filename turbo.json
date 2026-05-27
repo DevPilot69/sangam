@@ -1,0 +1,64 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [".env", ".env.local"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "DIRECT_DATABASE_URL",
+    "DEMO_MODE"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build", "^db:generate"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "NEXT_PUBLIC_API_URL",
+        "NEXT_PUBLIC_DATA_SOURCE",
+        "JWT_SECRET",
+        "JWT_REFRESH_SECRET",
+        "JWT_ACCESS_EXPIRES",
+        "JWT_REFRESH_EXPIRES",
+        "FRONTEND_URL",
+        "CORS_EXTRA_ORIGINS",
+        "AWS_S3_BUCKET",
+        "SENDGRID_API_KEY",
+        "RAZORPAY_KEY_ID",
+        "RAZORPAY_KEY_SECRET",
+        "RAZORPAY_WEBHOOK_SECRET",
+        "RAZORPAY_PLAN_STARTER",
+        "RAZORPAY_PLAN_GROWTH",
+        "BILLING_TRIAL_DAYS",
+        "DEV_AUTH_VERBOSE",
+        "DEMO_LATENCY_MS",
+        "EMPLOYEE_DEFAULT_PASSWORD_KEYWORD",
+        "LEGAL_DOCUMENTS_DIR",
+        "EMPLOYEE_DOCUMENTS_DIR"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^db:generate"]
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "db:generate": {
+      "cache": false,
+      "outputs": ["node_modules/.prisma/**", "node_modules/@prisma/client/**"]
+    },
+    "db:migrate": {
+      "cache": false
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
+    },
+    "db:seed": {
+      "cache": false
+    }
+  }
+}

@@ -1,0 +1,41 @@
+# Render Blueprint — Vetan API (https://github.com/harshbrickred-ctrl/vetan_v1-backend)
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: vetan-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: .
+    buildCommand: npm ci --include=dev && npm run build:render
+    startCommand: npm run start:render
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vetan-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: AWS_S3_BUCKET
+        value: dev-placeholder
+      - key: SENDGRID_API_KEY
+        value: SG.placeholder
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+
+databases:
+  - name: vetan-db
+    plan: free
+    region: oregon

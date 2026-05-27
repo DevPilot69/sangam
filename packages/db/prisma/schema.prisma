@@ -1,0 +1,727 @@
+// Sangam — core schema (formerly Vetan; merged monorepo on Next.js + Neon)
+
+generator client {
+  provider        = "prisma-client-js"
+  // Emit into the workspace package so any app in the monorepo can import
+  // `@prisma/client` and pick up the generated types via @sangam/db.
+  previewFeatures = []
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled connection (Neon's PgBouncer endpoint) — used at runtime.
+  url       = env("DATABASE_URL")
+  // Direct connection — used only by `prisma migrate` / `prisma db push`.
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+// ─── Enums ─────────────────────────────────────────
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  NOTICE
+  INACTIVE
+}
+
+enum SalaryComponentType {
+  FIXED
+  VARIABLE
+  STATUTORY
+  REIMBURSABLE
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  PROCESSING
+  PENDING
+  APPROVED
+  LOCKED
+  DISBURSED
+  ERROR
+}
+
+/// How salary is transferred to the employee bank account
+enum SalaryPaymentMethod {
+  NEFT
+  RTGS
+  IMPS
+  CHEQUE
+  CASH
+}
+
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+/** Platform-owner view: whether the tenant paid their Vetan subscription this cycle */
+enum TenantPaymentStatus {
+  PAID
+  UNPAID
+  OVERDUE
+  WAIVED
+}
+
+/** Organization legal / compliance documents stored per tenant */
+enum TenantLegalDocumentType {
+  CERTIFICATE_OF_INCORPORATION
+  MEMORANDUM_ARTICLES
+  GST_REGISTRATION
+  PAN_ENTITY
+  SHOPS_AND_ESTABLISHMENTS
+  MSME_UDYAM
+  LABOUR_LICENSE
+  OTHER
+}
+
+/** KYC / onboarding files kept per employee (uploaded by HR during onboarding) */
+enum EmployeeOnboardingDocumentType {
+  PAN_CARD
+  AADHAAR
+  ADDRESS_PROOF
+  BANK_PROOF
+  PHOTOGRAPH
+  OFFER_LETTER
+  EXPERIENCE_CERTIFICATE
+  EDUCATION_CERTIFICATE
+  OTHER
+}
+
+// ─── Platform (SaaS owner) ───────────────────────
+
+model PlatformAdmin {
+  id              String     @id @default(uuid())
+  email           String     @unique
+  passwordHash    String
+  name            String
+  status          UserStatus @default(ACTIVE)
+  lastLoginAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+/** Default holidays applied to every tenant unless overridden on that date. */
+model PlatformHoliday {
+  id        String   @id @default(uuid())
+  date      DateTime @db.Date
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date])
+  @@index([date])
+}
+
+// ─── Tenant & identity ─────────────────────────────
+
+model Tenant {
+  id                     String    @id @default(uuid())
+  slug                   String    @unique
+  /** Short unique org code (e.g. BR, AC) used in employee login usernames */
+  companyCode            String?   @unique
+  name                   String
+  legalName              String?
+  industry               String?
+  country                String    @default("IN")
+  /** Workspace-scoped settings (company profile, statutory, payroll prefs, etc.) */
+  settings               Json      @default("{}")
+  onboardingCompletedAt  DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  users                  User[]
+  roles                  Role[]
+  departments            Department[]
+  designations           Designation[]
+  holidays               TenantHoliday[]
+  employees              Employee[]
+  salaryComponents       SalaryComponent[]
+  salaryStructures       SalaryStructure[]
+  leaveTypes             LeaveType[]
+  payrollRuns            PayrollRun[]
+  leaveRequests          LeaveRequest[]
+  attendanceRecords      AttendanceRecord[]
+  auditLogs              AuditLog[]
+  notifications          Notification[]
+  subscriptions          Subscription[]
+  billingOps             TenantBillingOps?
+  legalDocuments         TenantLegalDocument[]
+  employeeOnboardingDocuments EmployeeOnboardingDocument[]
+}
+
+model TenantLegalDocument {
+  id                String                  @id @default(uuid())
+  tenantId          String
+  tenant            Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documentType      TenantLegalDocumentType
+  originalFilename  String
+  storedFilename    String
+  mimeType          String
+  sizeBytes         Int
+  createdAt         DateTime                @default(now())
+
+  @@index([tenantId])
+}
+
+model User {
+  id                String     @id @default(uuid())
+  tenantId          String
+  tenant            Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email             String
+  /** Employee portal login id: companyCode + employeeCode (admins use email) */
+  loginUsername     String?
+  passwordHash      String
+  name              String
+  phone             String?
+  phoneAlt          String?
+  aadhar            String?
+  pan               String?
+  status            UserStatus @default(ACTIVE)
+  emailVerifiedAt   DateTime?
+  failedLoginCount  Int        @default(0)
+  lockedUntil       DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  deletedAt         DateTime?
+
+  roles             UserRole[]
+  refreshTokens     RefreshToken[]
+  employee          Employee?
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, loginUsername])
+  @@index([tenantId, id])
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  code        String           @unique
+  description String?
+  rolePerms   RolePermission[]
+}
+
+model Role {
+  id          String             @id @default(uuid())
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, id])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  email     String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model EmailVerificationOtp {
+  id        String   @id @default(uuid())
+  email     String
+  tenantId  String?
+  codeHash  String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+// ─── Organization ──────────────────────────────────
+
+model Department {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  code        String
+  headUserId  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  employees   Employee[]
+  designations Designation[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, id])
+}
+
+model Designation {
+  id           String     @id @default(uuid())
+  tenantId     String
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  title        String
+  grade        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+
+  employees    Employee[]
+
+  @@index([tenantId, id])
+}
+
+model TenantHoliday {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, date])
+  @@index([tenantId, date])
+}
+
+model Employee {
+  id             String            @id @default(uuid())
+  tenantId       String
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId         String?           @unique
+  user           User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  employeeCode   String
+  firstName      String
+  lastName       String
+  email          String
+  departmentId   String?
+  department     Department?       @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  designationId  String?
+  designation    Designation?      @relation(fields: [designationId], references: [id], onDelete: SetNull)
+  status         EmploymentStatus  @default(ACTIVE)
+  dateOfJoining  DateTime
+  ctcAnnual      Decimal?          @db.Decimal(14, 2)
+  pan            String?
+  bankName       String?
+  bankAccount    String?
+  ifsc           String?
+  salaryPaymentMethod SalaryPaymentMethod @default(NEFT)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
+  version        Int               @default(0)
+
+  salaryAssignments SalaryAssignment[]
+  attendanceRecords AttendanceRecord[]
+  leaveBalances     LeaveBalance[]
+  leaveRequests     LeaveRequest[]
+  payrollEntries    PayrollEntry[]
+  payslips          Payslip[]
+  onboardingDocuments EmployeeOnboardingDocument[]
+
+  @@unique([tenantId, employeeCode])
+  @@unique([tenantId, email])
+  @@index([tenantId, id])
+}
+
+model EmployeeOnboardingDocument {
+  id               String                        @id @default(uuid())
+  tenantId         String
+  tenant           Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeId       String
+  employee         Employee                      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  documentType     EmployeeOnboardingDocumentType
+  originalFilename String
+  storedFilename   String
+  mimeType         String
+  sizeBytes        Int
+  createdAt        DateTime                      @default(now())
+
+  @@index([tenantId, employeeId])
+  @@index([employeeId])
+}
+
+// ─── Salary ────────────────────────────────────────
+
+model SalaryComponent {
+  id          String              @id @default(uuid())
+  tenantId    String
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  type        SalaryComponentType
+  isTaxable   Boolean             @default(true)
+  metadata    Json?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  structureRows SalaryStructureComponent[]
+
+  @@index([tenantId, id])
+}
+
+model SalaryStructure {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  components  SalaryStructureComponent[]
+  assignments SalaryAssignment[]
+
+  @@index([tenantId, id])
+}
+
+model SalaryStructureComponent {
+  id            String          @id @default(uuid())
+  structureId   String
+  structure     SalaryStructure @relation(fields: [structureId], references: [id], onDelete: Cascade)
+  componentId   String
+  component     SalaryComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  amount        Decimal?        @db.Decimal(14, 2)
+  percentOfBasic Decimal?       @db.Decimal(7, 4)
+  sortOrder     Int             @default(0)
+
+  @@index([structureId])
+}
+
+model SalaryAssignment {
+  id          String          @id @default(uuid())
+  employeeId  String
+  employee    Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  structureId String
+  structure   SalaryStructure @relation(fields: [structureId], references: [id], onDelete: Cascade)
+  effectiveFrom DateTime
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  version     Int             @default(0)
+
+  revisions   SalaryRevision[]
+
+  @@index([employeeId])
+}
+
+model SalaryRevision {
+  id           String           @id @default(uuid())
+  assignmentId String
+  assignment   SalaryAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  payload      Json
+  effectiveOn  DateTime
+  reason       String?
+  createdAt    DateTime         @default(now())
+}
+
+// ─── Attendance & leave ────────────────────────────
+
+model AttendanceRecord {
+  id         String   @id @default(uuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date       DateTime @db.Date
+  status     String
+  /// First biometric / gate punch (arrival)
+  checkIn    DateTime?
+  /// Last biometric / gate punch (departure)
+  checkOut   DateTime?
+  remarks    String?
+  /// manual | biometric | import | system
+  source     String   @default("manual")
+  /// Optional structured sessions / integration payload (shift windows, splits, device metadata)
+  detail     Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([tenantId, date])
+}
+
+model LeaveType {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code        String
+  name        String
+  daysPerYear Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  balances    LeaveBalance[]
+  requests    LeaveRequest[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, id])
+}
+
+model LeaveBalance {
+  id           String    @id @default(uuid())
+  employeeId   String
+  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveTypeId  String
+  leaveType    LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+  balanceDays  Decimal   @db.Decimal(6, 2)
+  year         Int
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([employeeId, leaveTypeId, year])
+}
+
+model LeaveRequest {
+  id          String             @id @default(uuid())
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeId  String
+  employee    Employee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveTypeId String
+  leaveType   LeaveType          @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+  startDate   DateTime           @db.Date
+  endDate     DateTime           @db.Date
+  workingDays Decimal            @db.Decimal(6, 2)
+  reason      String?
+  status      LeaveRequestStatus @default(PENDING)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([tenantId, status])
+}
+
+// ─── Payroll ────────────────────────────────────────
+
+model PayrollRun {
+  id                   String            @id @default(uuid())
+  tenantId             String
+  tenant               Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  periodYear           Int
+  periodMonth          Int
+  status               PayrollRunStatus  @default(DRAFT)
+  initiatedById        String?
+  /// Employees manually or auto-excluded from this run (not paid this cycle)
+  excludedEmployeeIds  String[]          @default([])
+  ackWarnings          Boolean           @default(false)
+  ackWarningsReason    String?
+  /// Default payment rail for salary file (NEFT is typical for payroll)
+  disbursementPaymentMethod SalaryPaymentMethod @default(NEFT)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  version              Int               @default(0)
+
+  entries              PayrollEntry[]
+  payslips             Payslip[]
+
+  @@unique([tenantId, periodYear, periodMonth])
+  @@index([tenantId, id])
+}
+
+model PayrollEntry {
+  id           String     @id @default(uuid())
+  payrollRunId String
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employeeId   String
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  gross        Decimal    @db.Decimal(14, 2)
+  deductions   Decimal    @db.Decimal(14, 2)
+  net          Decimal    @db.Decimal(14, 2)
+  breakdown    Json?
+  createdAt    DateTime   @default(now())
+
+  @@unique([payrollRunId, employeeId])
+}
+
+model Payslip {
+  id           String     @id @default(uuid())
+  payrollRunId String
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employeeId   String
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  pdfKey       String?
+  createdAt    DateTime   @default(now())
+
+  @@unique([payrollRunId, employeeId])
+}
+
+// ─── Audit & notifications ────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  tenantId   String?
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  diff       Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String
+  title     String
+  body      String?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, userId])
+}
+
+model NotificationPreference {
+  id        String  @id @default(uuid())
+  userId    String
+  eventCode String
+  emailOn   Boolean @default(true)
+
+  @@unique([userId, eventCode])
+}
+
+// ─── Billing ───────────────────────────────────────
+
+model Subscription {
+  id                     String             @id @default(uuid())
+  tenantId               String             @unique
+  tenant                 Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  razorpayCustomerId     String?
+  razorpaySubscriptionId String?
+  status                 SubscriptionStatus @default(TRIALING)
+  planCode               String?
+  trialEndsAt            DateTime?
+  currentPeriodEnd       DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  invoices Invoice[]
+}
+
+model Invoice {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  amount         Decimal      @db.Decimal(14, 2)
+  currency       String       @default("INR")
+  status         String
+  pdfUrl         String?
+  periodYear     Int?
+  periodMonth    Int?
+  paidAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([subscriptionId, createdAt])
+}
+
+/// SaaS owner ops: subscription revenue vs infra cost per tenant
+model TenantBillingOps {
+  id                   String              @id @default(uuid())
+  tenantId             String              @unique
+  tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  monthlyFeeInr        Decimal             @db.Decimal(14, 2)
+  monthlyServerCostInr Decimal             @db.Decimal(14, 2)
+  paymentStatus        TenantPaymentStatus @default(UNPAID)
+  lastPaidAt           DateTime?
+  billingNotes         String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+}
+
+// ─── Demo-mode mock providers ──────────────────────────────────────────────
+//
+// These tables back the @sangam/demo mock providers. They exist in the schema
+// regardless of DEMO_MODE so production schema stays consistent, but rows are
+// only written when DEMO_MODE=true.
+
+/// Replaces SendGrid in demo mode. Every "send" inserts a row here; the
+/// /platform/inbox admin page renders the queue so testers can read OTPs,
+/// password-reset tokens, invites etc.
+model MockEmail {
+  id        String   @id @default(uuid())
+  tenantId  String?
+  toEmail   String
+  fromEmail String   @default("no-reply@sangam.local")
+  subject   String
+  body      String
+  /// Used by the inbox UI to deep-link to the source action (e.g. "reset-password", "verify-email").
+  category  String?
+  metadata  Json?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([toEmail, createdAt])
+}
+
+/// Replaces S3 / Vercel Blob in demo mode. Stores file metadata only — the
+/// download Route Handler serves a sample PDF from apps/web/public/samples/.
+model MockUpload {
+  id         String   @id @default(uuid())
+  tenantId   String?
+  /// Where this upload would have been bucketed in real storage (e.g. "tenant-legal-docs").
+  kind       String
+  /// Logical reference (e.g. employeeId or document slug).
+  ownerRef   String?
+  fileName   String
+  mimeType   String
+  sizeBytes  Int
+  /// Always "mock" when DEMO_MODE=true; later "s3" or "blob".
+  storage    String   @default("mock")
+  /// In demo mode points to /samples/sample-document.pdf etc.
+  url        String
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, kind, createdAt])
+}

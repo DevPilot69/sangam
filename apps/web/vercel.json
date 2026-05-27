@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd ../.. && npm run build -- --filter=@sangam/web",
+  "installCommand": "cd ../.. && npm install --workspaces --include-workspace-root",
+  "framework": "nextjs",
+  "regions": ["bom1"],
+  "functions": {
+    "src/app/v1/payroll/runs/[id]/finalize/route.ts": {
+      "maxDuration": 300
+    }
+  },
+  "crons": []
+}
