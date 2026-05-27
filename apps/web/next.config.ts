@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   // Required for `node` runtime route handlers that pull in @prisma/client and
@@ -15,10 +16,18 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // Frontend workspace packages are TS-first; let Next transpile them.
   transpilePackages: ["@sangam/contracts", "@sangam/api-kit", "@sangam/demo"],
-  experimental: {
-    // Optional: silences workspace package import warnings.
-    typedRoutes: false,
-  },
+  // typedRoutes moved out of `experimental` as of Next 16; keep it disabled
+  // because Turbopack doesn't support it yet.
+  typedRoutes: false,
 };
 
-export default nextConfig;
+// Sentry build-time wrapper. No-ops if SENTRY_DSN / SENTRY_AUTH_TOKEN aren't
+// set; produces source maps & a release entry when they are.
+export default withSentryConfig(nextConfig, {
+  silent: !process.env.CI,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  tunnelRoute: process.env.SENTRY_TUNNEL_ROUTE,
+  widenClientFileUpload: false,
+});

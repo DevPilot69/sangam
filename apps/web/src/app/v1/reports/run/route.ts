@@ -4,6 +4,7 @@ import * as reports from "@/server/reports/reports-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
 export const POST = withApi(async (req) => {
   const user = await requireAuth(req, ["reports:read"]);

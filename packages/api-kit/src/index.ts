@@ -36,3 +36,5 @@ export * from "./sign-jwt";
 export * from "./rate-limit";
 export * from "./with-raw-body";
 export * from "./cookies";
+export * from "./logger";
+export * from "./error-reporter";

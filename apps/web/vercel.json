@@ -8,6 +8,21 @@
     "src/app/v1/payroll/runs/[id]/finalize/route.ts": {
       "maxDuration": 300
     },
+    "src/app/v1/payroll/runs/[id]/preview/route.ts": {
+      "maxDuration": 120
+    },
+    "src/app/v1/payroll/runs/[id]/validate/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/v1/reports/run/route.ts": {
+      "maxDuration": 120
+    },
+    "src/app/v1/employees/export/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/v1/platform/tenants/route.ts": {
+      "maxDuration": 60
+    },
     "src/app/v1/_cron/seed-attendance/route.ts": {
       "maxDuration": 300
     }

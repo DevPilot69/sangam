@@ -21,9 +21,7 @@
  * (`isDemoMode()`) only.
  */
 
-export const isDemoMode = (): boolean =>
-  (process.env.DEMO_MODE ?? "true").toLowerCase() !== "false";
-
+export { isDemoMode } from "./demo-mode";
 export * from "./email";
 export * from "./storage";
 export * as biometric from "./biometric";

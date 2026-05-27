@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiError, BadGatewayError } from "./errors";
+import { childLogger, type Logger } from "./logger";
+import { reportError } from "./error-reporter";
 
 /**
  * Wraps a Route Handler with:
@@ -7,6 +9,7 @@ import { ApiError, BadGatewayError } from "./errors";
  *  - Response envelope        { success: true,  data, timestamp }
  *  - Error envelope           { success: false, error: { code, message, details? }, timestamp, requestId }
  *  - Request-id propagation   echoes `x-request-id` or generates a UUID
+ *  - Structured request log   one access line per request via pino (path, method, status, ms)
  *  - Demo simulation header   `x-demo-error: 500|502` -> throws BadGatewayError
  *  - Demo latency             DEMO_LATENCY_MS env adds artificial delay
  *
@@ -27,6 +30,7 @@ import { ApiError, BadGatewayError } from "./errors";
 export type RouteHandler<Ctx = unknown> = (
   req: NextRequest,
   ctx: Ctx,
+  log: Logger,
 ) => Promise<unknown> | unknown;
 
 const isProd = () => process.env.NODE_ENV === "production";
@@ -53,32 +57,69 @@ async function applyDemoBehaviour(req: NextRequest): Promise<void> {
   }
 }
 
+function pathFromRequest(req: NextRequest): string {
+  try {
+    return new URL(req.url).pathname;
+  } catch {
+    return req.url;
+  }
+}
+
 export function withApi<Ctx = unknown>(
   handler: RouteHandler<Ctx>,
 ): (req: NextRequest, ctx: Ctx) => Promise<Response> {
   return async (req, ctx) => {
     const requestId = req.headers.get("x-request-id") ?? generateRequestId();
     const timestamp = nowIso();
+    const startedAt = Date.now();
+    const path = pathFromRequest(req);
+    const log = childLogger({ requestId, method: req.method, path });
 
     try {
       await applyDemoBehaviour(req);
 
-      const result = await handler(req, ctx);
+      const result = await handler(req, ctx, log);
 
       // Escape hatch: handler returned a raw Response (downloads, redirects).
       if (result instanceof Response) {
         if (!result.headers.has("x-request-id")) {
           result.headers.set("x-request-id", requestId);
         }
+        log.info(
+          { status: result.status, ms: Date.now() - startedAt },
+          "request.completed",
+        );
         return result;
       }
 
+      log.info({ status: 200, ms: Date.now() - startedAt }, "request.completed");
       return NextResponse.json(
         { success: true, data: result ?? null, timestamp },
         { status: 200, headers: { "x-request-id": requestId } },
       );
     } catch (err) {
-      return errorEnvelope(err, requestId, timestamp);
+      const response = errorEnvelope(err, requestId, timestamp);
+      const ms = Date.now() - startedAt;
+      if (err instanceof ApiError) {
+        // Expected/validated errors → warn so they don't pollute error metrics.
+        log.warn(
+          { status: response.status, code: err.code, ms },
+          "request.failed",
+        );
+      } else {
+        log.error(
+          {
+            status: 500,
+            ms,
+            err: err instanceof Error
+              ? { name: err.name, message: err.message, stack: err.stack }
+              : err,
+          },
+          "request.crashed",
+        );
+        reportError(err, { requestId, method: req.method, path, ms });
+      }
+      return response;
     }
   };
 }

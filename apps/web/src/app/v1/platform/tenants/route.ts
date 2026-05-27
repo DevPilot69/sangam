@@ -10,6 +10,7 @@ import * as tenants from "@/server/platform/platform-tenants-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export const GET = withApi(async (req) => {
   await requirePlatformAuth(req);

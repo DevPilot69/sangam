@@ -1,4 +1,4 @@
-import { isDemoMode } from "./index";
+import { isDemoMode } from "./demo-mode";
 
 /**
  * PDF generation mock provider.

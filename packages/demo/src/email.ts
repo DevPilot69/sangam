@@ -1,5 +1,5 @@
 import { prisma } from "@sangam/db";
-import { isDemoMode } from "./index";
+import { isDemoMode } from "./demo-mode";
 
 /**
  * Email provider — pluggable. In demo mode, inserts into MockEmail so the

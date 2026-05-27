@@ -3,6 +3,7 @@ import * as payroll from "@/server/payroll/payroll-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
 type Ctx = { params: Promise<{ id: string }> };
 

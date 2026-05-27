@@ -1,5 +1,5 @@
 import { prisma } from "@sangam/db";
-import { isDemoMode } from "./index";
+import { isDemoMode } from "./demo-mode";
 
 /**
  * Storage provider — pluggable. In demo mode, file BYTES are discarded; only

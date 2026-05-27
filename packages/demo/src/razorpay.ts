@@ -1,5 +1,5 @@
 import { createHmac, randomBytes } from "crypto";
-import { isDemoMode } from "./index";
+import { isDemoMode } from "./demo-mode";
 
 /**
  * Razorpay mock provider.

@@ -27,6 +27,7 @@
     "@sangam/contracts": "*",
     "@sangam/db": "*",
     "@sangam/demo": "*",
+    "@sentry/nextjs": "^10.54.0",
     "@tanstack/react-query": "^5.100.10",
     "@tanstack/react-table": "^8.21.3",
     "axios": "^1.16.0",
