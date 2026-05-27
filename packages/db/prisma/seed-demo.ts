@@ -6,7 +6,7 @@
  * Or: npm run seed:demo
  */
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { backfillBillingForTenant } from './seeds/billing-ops';
 import { ensureEmployeePortalUser } from './seeds/ensure-employee-portal-user';
 import { ensureThreeRoleModel } from './seeds/ensure-three-role-model';

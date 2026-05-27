@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { DEMO_PASSWORD } from './tenants.config';
 
 const BCRYPT_ROUNDS = 12;

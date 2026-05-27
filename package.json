@@ -18,7 +18,8 @@
     "db:generate": "npm run db:generate -w @sangam/db",
     "db:migrate": "npm run db:migrate -w @sangam/db",
     "db:studio": "npm run db:studio -w @sangam/db",
-    "db:seed": "npm run db:seed -w @sangam/db"
+    "db:seed": "npm run db:seed -w @sangam/db",
+    "db:seed:demo": "npm run db:seed:demo -w @sangam/db"
   },
   "devDependencies": {
     "turbo": "^2.5.8",

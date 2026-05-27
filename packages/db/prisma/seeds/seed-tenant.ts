@@ -7,7 +7,7 @@ import {
   PrismaClient,
   SubscriptionStatus,
 } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import type { TenantProfile } from './tenants.config';
 import { DEMO_PASSWORD } from './tenants.config';
 import {
